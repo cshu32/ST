@@ -1,0 +1,54 @@
+from flask import Flask, render_template, request
+
+app = Flask(__name__)
+
+def determine_security_interest(parties, additional_conditions):
+    for party in parties:
+        if party['has_security_agreement'] and party['has_financial_statement']:
+            if additional_conditions.get('bankruptcy'):
+                # Apply bankruptcy-related rule
+                return True
+            elif additional_conditions.get('lien_creditor'):
+                # Apply lien creditor-related rule
+                return True
+            else:
+                # Apply the default rule if no specific condition is met
+                return True
+
+    return False
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        parties = []
+
+        i = 1
+        while f'party_{i}_name' in request.form:
+            party_name = request.form[f'party_{i}_name']
+            has_security_agreement = request.form.get(f'party_{i}_has_security_agreement', False)
+            agreement_date = request.form[f'party_{i}_agreement_date']
+            has_financial_statement = request.form.get(f'party_{i}_has_financial_statement', False)
+            statement_filing_date = request.form[f'party_{i}_statement_filing_date']
+
+            parties.append({
+                'name': party_name,
+                'has_security_agreement': has_security_agreement,
+                'agreement_date': agreement_date,
+                'has_financial_statement': has_financial_statement,
+                'statement_filing_date': statement_filing_date,
+            })
+
+            i += 1
+
+        additional_conditions = {
+            'bankruptcy': request.form.get('bankruptcy', False),
+            'lien_creditor': request.form.get('lien_creditor', False),
+        }
+
+        has_security_interest = determine_security_interest(parties, additional_conditions)
+        return render_template('result.html', has_security_interest=has_security_interest, parties=parties)
+
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    app.run(debug=True)
